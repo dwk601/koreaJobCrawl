@@ -38,6 +38,13 @@ def run_all(config, project_root=None):
             except Exception as e:
                 logger.exception(f"Failed {CrawlerCls.SOURCE}: {e}")
                 session.rollback()
+        session.commit()
+        for CrawlerCls in CRAWLERS:
+            crawler = CrawlerCls(session, config)
+            purged = crawler.purge_old_jobs()
+            if purged:
+                logger.info(f"Purged {purged} old jobs from {CrawlerCls.SOURCE}")
+        session.commit()
     finally:
         session.close()
 

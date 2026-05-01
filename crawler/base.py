@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from urllib.parse import urljoin, parse_qs, urlparse
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
-from crawler.db import Job, select
+from crawler.db import Job, select, text
 
 logger = logging.getLogger(__name__)
 
@@ -158,6 +158,26 @@ class BaseCrawler:
             count += 1
         if count:
             self.db.commit()
+        return count
+
+    def purge_old_jobs(self, purge_days=180):
+        if purge_days <= 0:
+            return 0
+        cutoff = datetime.utcnow() - timedelta(days=purge_days)
+        stmt = (
+            select(Job)
+            .where(Job.source_site == self.SOURCE)
+            .where(Job.date_posted < cutoff)
+            .where(Job.is_active == False)
+        )
+        old_jobs = self.db.scalars(stmt).all()
+        count = 0
+        for job in old_jobs:
+            self.db.delete(job)
+            count += 1
+        if count:
+            self.db.commit()
+            self.db.execute(text('VACUUM'))
         return count
 
     def run(self):

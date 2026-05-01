@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, Boolean, UniqueConstraint, select
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, Boolean, UniqueConstraint, select, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime
 import os

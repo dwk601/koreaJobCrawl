@@ -104,4 +104,5 @@ class TexasKSACrawler(BaseCrawler):
                     break
                 page += 1
         finally:
+            self.db.commit()
             self.stop()
