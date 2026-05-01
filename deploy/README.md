@@ -35,7 +35,7 @@ From your local machine:
 
 ```bash
 cd deploy
-./deploy-remote.sh user@your-server /opt/korea-job-crawl
+./deploy-remote.sh user@your-server /opt/koreaJobCrawl
 ```
 
 This will:
@@ -56,14 +56,14 @@ crontab -e
 Add:
 
 ```
-0 3 * * 0 cd /opt/korea-job-crawl/deploy && docker compose up --build >> /var/log/crawler.log 2>&1
+0 3 * * 0 cd /opt/koreaJobCrawl/deploy && docker compose up --build >> /var/log/crawler.log 2>&1
 ```
 
 Or use systemd timer (see `crawler.service` and `crawler.timer`):
 
 ```bash
-sudo cp /opt/korea-job-crawl/deploy/crawler.service /etc/systemd/system/
-sudo cp /opt/korea-job-crawl/deploy/crawler.timer /etc/systemd/system/
+sudo cp /opt/koreaJobCrawl/deploy/crawler.service /etc/systemd/system/
+sudo cp /opt/koreaJobCrawl/deploy/crawler.timer /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable crawler.timer
 sudo systemctl start crawler.timer
@@ -72,7 +72,7 @@ sudo systemctl start crawler.timer
 ### Step 4: Check results
 
 ```bash
-ssh user@your-server "sqlite3 /opt/korea-job-crawl/deploy/data/jobs.db 'SELECT source_site, COUNT(*) FROM jobs GROUP BY source_site;'"
+ssh user@your-server "sqlite3 /opt/koreaJobCrawl/deploy/data/jobs.db 'SELECT source_site, COUNT(*) FROM jobs GROUP BY source_site;'"
 ```
 
 ### Manual Docker run (no script)
@@ -81,10 +81,10 @@ If you prefer to copy files manually:
 
 ```bash
 # On local machine
-scp -r crawler/ config.yaml requirements.txt run.py user@server:/opt/korea-job-crawl/
+scp -r crawler/ config.yaml requirements.txt run.py user@server:/opt/koreaJobCrawl/
 
 # On remote server
-cd /opt/korea-job-crawl/deploy
+cd /opt/koreaJobCrawl/deploy
 mkdir -p data
 docker compose up --build
 ```

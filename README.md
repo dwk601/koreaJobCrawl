@@ -14,7 +14,7 @@ A Dockerized Python crawler that scrapes Korean job posting boards in the US and
 
 ```bash
 git clone https://github.com/dwk601/koreaJobCrawl.git
-cd korea-job-crawl/deploy
+cd koreaJobCrawl/deploy
 docker compose up --build
 ```
 
@@ -33,7 +33,7 @@ crontab -e
 Add this line (adjust path):
 
 ```
-0 3 * * 0 cd /path/to/korea-job-crawl/deploy && docker compose up --build >> /var/log/crawler.log 2>&1
+0 3 * * 0 cd /path/to/koreaJobCrawl/deploy && docker compose up --build >> /var/log/crawler.log 2>&1
 ```
 
 Runs every Sunday at 3:00 AM.
