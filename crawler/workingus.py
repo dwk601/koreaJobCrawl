@@ -49,6 +49,8 @@ class WorkingUSCrawler(BaseCrawler):
                     elif date_el:
                         date_str = date_el.get_text(strip=True)
                     date_posted = self.parse_date(date_str)
+                    if self.is_job_too_old(date_posted):
+                        continue
 
                     views_el = row.select_one('li.bbp-topic-voice-count')
                     views = 0

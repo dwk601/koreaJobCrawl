@@ -8,6 +8,8 @@ timeout: 30000
 commit_batch: 20
 # Skip re-scraping posts updated within N days
 recency_skip_days: 7
+# Only scrape jobs posted within N days (0 = no limit)
+max_age_days: 60
 sites:
   gtksa:
     max_pages: 0

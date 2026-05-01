@@ -74,6 +74,8 @@ class JobKoreaUSACrawler(BaseCrawler):
                     mod_el = detail_soup.select_one('.cin-box .modify_date')
                     date_str = mod_el.get_text(strip=True).replace('Updated:', '').strip() if mod_el else ''
                     date_posted = self.parse_date(date_str)
+                    if self.is_job_too_old(date_posted):
+                        continue
 
                     views_el2 = detail_soup.select_one('.cin-box .hits em')
                     if views_el2:

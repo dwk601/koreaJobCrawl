@@ -30,6 +30,9 @@ def run_all(config, project_root=None):
             try:
                 logger.info(f"Starting {CrawlerCls.SOURCE}")
                 crawler.run()
+                deactivated = crawler.deactivate_old_jobs()
+                if deactivated:
+                    logger.info(f"Deactivated {deactivated} old jobs from {CrawlerCls.SOURCE}")
                 session.commit()
                 logger.info(f"Finished {CrawlerCls.SOURCE}")
             except Exception as e:

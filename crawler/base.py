@@ -2,7 +2,7 @@ import logging
 import time
 import random
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import urljoin, parse_qs, urlparse
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
@@ -23,6 +23,7 @@ class BaseCrawler:
         self.timeout = config.get('timeout', 30000)
         self.commit_batch = config.get('commit_batch', 20)
         self.recency_skip_days = config.get('recency_skip_days', 7)
+        self.max_age_days = config.get('max_age_days', 0)
         self.jobs_since_commit = 0
         self.playwright = None
         self.browser = None
@@ -117,6 +118,12 @@ class BaseCrawler:
                 return False
         return True
 
+    def is_job_too_old(self, date_posted):
+        if not date_posted or self.max_age_days <= 0:
+            return False
+        cutoff = datetime.utcnow().date() - timedelta(days=self.max_age_days)
+        return date_posted.date() < cutoff
+
     def upsert_job(self, data: dict):
         stmt = select(Job).where(Job.source_site == data['source_site'], Job.external_id == data['external_id'])
         existing = self.db.scalar(stmt)
@@ -133,6 +140,25 @@ class BaseCrawler:
         if self.jobs_since_commit >= self.commit_batch:
             self.db.commit()
             self.jobs_since_commit = 0
+
+    def deactivate_old_jobs(self):
+        if self.max_age_days <= 0:
+            return 0
+        cutoff = datetime.utcnow() - timedelta(days=self.max_age_days)
+        stmt = (
+            select(Job)
+            .where(Job.source_site == self.SOURCE)
+            .where(Job.date_posted < cutoff)
+            .where(Job.is_active == True)
+        )
+        old_jobs = self.db.scalars(stmt).all()
+        count = 0
+        for job in old_jobs:
+            job.is_active = False
+            count += 1
+        if count:
+            self.db.commit()
+        return count
 
     def run(self):
         raise NotImplementedError

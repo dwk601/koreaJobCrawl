@@ -42,6 +42,8 @@ class TexasKSACrawler(BaseCrawler):
                     date_el = row.select_one('td.kboard-list-date')
                     date_str = date_el.get_text(strip=True) if date_el else ''
                     date_posted = self.parse_date(date_str)
+                    if self.is_job_too_old(date_posted):
+                        continue
                     views_el = row.select_one('td.kboard-list-view')
                     views = 0
                     if views_el:
