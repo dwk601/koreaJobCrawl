@@ -41,7 +41,7 @@ cd deploy
 This will:
 - rsync the project to the remote server (excluding `venv/`, `.git/`, `*.db`, `*.log`)
 - Build the Docker image on the remote
-- Run the crawler once
+- Run the crawler once in detached mode
 - The SQLite database (`jobs.db`) is created automatically inside `deploy/data/`
 
 ### Step 3: Schedule weekly runs on the remote server
@@ -49,14 +49,19 @@ This will:
 On the **remote server**, add a cron job:
 
 ```bash
-ssh user@your-server
-crontab -e
+# On remote server
+cd /opt/koreaJobCrawl/deploy
+mkdir -p data
+docker compose up -d --build
+
+# View logs
+docker compose logs -f
 ```
 
 Add:
 
 ```
-0 3 * * 0 cd /opt/koreaJobCrawl/deploy && docker compose up --build >> /var/log/crawler.log 2>&1
+0 3 * * 0 cd /opt/koreaJobCrawl/deploy && docker compose up -d --build >> /opt/koreaJobCrawl/crawler.log 2>&1
 ```
 
 Or use systemd timer (see `crawler.service` and `crawler.timer`):
@@ -129,10 +134,10 @@ The `docker-compose.yml` mounts a `data/` directory from the host into the conta
 
 ## Logs
 
-Docker logs go to stdout. View with:
+When running with `-d` (detached), view logs with:
 
 ```bash
-cd deploy && docker compose logs
+cd deploy && docker compose logs -f
 ```
 
-For cron/systemd, logs are written to `/var/log/crawler.log` (adjust path as needed).
+For cron, logs are written to the path you specify in the crontab (e.g., `/home/username/crawler.log`).

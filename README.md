@@ -15,10 +15,15 @@ A Dockerized Python crawler that scrapes Korean job posting boards in the US and
 ```bash
 git clone https://github.com/dwk601/koreaJobCrawl.git
 cd koreaJobCrawl/deploy
-docker compose up --build
+docker compose up -d --build
 ```
 
-That's it. The SQLite database is created automatically on first run and persists in `deploy/data/jobs.db`.
+The `-d` flag runs the crawler in the background (detached). The SQLite database is created automatically on first run and persists in `deploy/data/jobs.db`.
+
+View live logs:
+```bash
+docker compose logs -f
+```
 
 ---
 
@@ -30,10 +35,10 @@ On your server, add a cron job:
 crontab -e
 ```
 
-Add this line (adjust path):
+Add this line (adjust path and user):
 
 ```
-0 3 * * 0 cd /path/to/koreaJobCrawl/deploy && docker compose up --build >> /var/log/crawler.log 2>&1
+0 3 * * 0 cd /home/YOUR_USERNAME/koreaJobCrawl/deploy && docker compose up -d --build >> /home/YOUR_USERNAME/crawler.log 2>&1
 ```
 
 Runs every Sunday at 3:00 AM.
