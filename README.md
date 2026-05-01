@@ -13,7 +13,7 @@ A Dockerized Python crawler that scrapes Korean job posting boards in the US and
 ## Quick Start (Docker)
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/korea-job-crawl.git
+git clone https://github.com/dwk601/koreaJobCrawl.git
 cd korea-job-crawl/deploy
 docker compose up --build
 ```
