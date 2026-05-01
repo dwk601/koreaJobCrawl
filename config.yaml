@@ -1,0 +1,19 @@
+db_path: jobs.db
+headless: true
+# Delay between requests (seconds)
+delay_min: 1.5
+delay_max: 2.5
+max_retries: 3
+timeout: 30000
+commit_batch: 20
+# Skip re-scraping posts updated within N days
+recency_skip_days: 7
+sites:
+  gtksa:
+    max_pages: 0
+  jobkoreausa:
+    max_pages: 0
+  workingus:
+    max_pages: 0
+  texasksa:
+    max_pages: 0

@@ -1,0 +1,15 @@
+[Unit]
+Description=Korean Job Board Crawler
+After=network.target
+
+[Service]
+Type=oneshot
+User=dev
+Group=dev
+WorkingDirectory=/home/dev/code/koreaJobCrawl
+ExecStart=/home/dev/code/koreaJobCrawl/venv/bin/python /home/dev/code/koreaJobCrawl/run.py
+StandardOutput=append:/var/log/crawler.log
+StandardError=append:/var/log/crawler.log
+
+[Install]
+WantedBy=multi-user.target

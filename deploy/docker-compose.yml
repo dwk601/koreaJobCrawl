@@ -1,0 +1,13 @@
+services:
+  crawler:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    container_name: korea-job-crawler
+    volumes:
+      - ./data:/app/data
+      - ../config.yaml:/app/config.yaml
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DB_PATH=/app/data/jobs.db
+    restart: no

@@ -1,0 +1,4 @@
+# Weekly cron job: every Sunday at 3:00 AM
+# Run: crontab -e and paste the line below (adjust paths)
+
+0 3 * * 0 cd /home/dev/code/koreaJobCrawl && ./venv/bin/python run.py >> /var/log/crawler.log 2>&1

@@ -1,0 +1,46 @@
+# Project-local
+.agents/
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Playwright
+.playwright-cli/
+node_modules/
+package-lock.json
+package.json
+
+# Generated during inspection
+jkusa_*.html
+inspect_*.js
+inspect_*.py
+wu_*.yml
+wu_*.json
+txksa_*.yml
+final_eval.py
+
+# Database & logs
+*.db
+*.db-journal
+*.log
+
+# Config overrides (keep example only if needed)
+# config.yaml  # actually keep this
