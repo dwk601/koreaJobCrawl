@@ -6,7 +6,10 @@ SQLite Data Cleaner + PocketBase Migration Pipeline
 - Extracts company from title/content
 - Normalizes salary_info
 - Creates PocketBase collections (sources, companies, locations, categories, job_postings)
-- Migrates data with relations
+- Migrates data with relations (idempotent: skips existing records)
+Usage:
+    python migrate_to_pocketbase.py           # Live migration
+    python migrate_to_pocketbase.py --dry-run # Preview only
 """
 
 import re
@@ -15,6 +18,7 @@ import json
 import urllib.request
 import urllib.error
 import urllib.parse
+import argparse
 from datetime import datetime
 
 # Config
@@ -42,6 +46,14 @@ COMPANY_PATTERNS = [
     r'([A-Za-z0-9\s&\.\-]+)\s*에서\s*(?:구인|모집|채용)',
     r'([\uac00-\ud7af\s]+(?:회사|그룹|센터|샵|식당|카페|마켓|스토어|병원|클리닉))\s*에서',
 ]
+
+DRY_RUN = False
+
+
+def log(msg):
+    """Print with timestamp."""
+    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print(f"[{ts}] {msg}")
 
 
 def pb_auth():
@@ -121,6 +133,9 @@ def clean_salary(salary_text):
 
 
 def get_or_create_record(token, collection, data, filter_query):
+    if DRY_RUN:
+        log(f"  [DRY-RUN] Would create in {collection}: {data}")
+        return f"dry-run-{collection}-{hash(str(data)) & 0xFFFFFFFF}"
     try:
         result = pb_request("POST", f"/api/collections/{collection}/records", token, data)
         return result['id']
@@ -132,16 +147,43 @@ def get_or_create_record(token, collection, data, filter_query):
         raise
 
 
+def fetch_existing_jobs(token, source_id_map):
+    """Fetch all existing (source_id, external_id) pairs from PocketBase."""
+    existing = set()
+    page = 1
+    per_page = 500
+    while True:
+        req = urllib.request.Request(
+            f"{PB_URL}/api/collections/job_postings/records?perPage={per_page}&page={page}",
+            headers={'Authorization': token}
+        )
+        with urllib.request.urlopen(req) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            for item in data.get('items', []):
+                existing.add((item.get('source'), item.get('external_id')))
+            if len(data.get('items', [])) < per_page:
+                break
+            page += 1
+    return existing
+
+
 def main():
-    print(f"[{datetime.now()}] Starting SQLite -> PocketBase migration")
+    global DRY_RUN
+    parser = argparse.ArgumentParser(description='SQLite to PocketBase migration')
+    parser.add_argument('--dry-run', action='store_true', help='Preview without writing to PocketBase')
+    args = parser.parse_args()
+    DRY_RUN = args.dry_run
+    
+    mode = "[DRY-RUN] " if DRY_RUN else ""
+    log(f"{mode}Starting SQLite -> PocketBase migration")
     
     # Phase 1: Clean SQLite data
-    print("\n[Phase 1] Cleaning SQLite data...")
+    log("[Phase 1] Cleaning SQLite data...")
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
-    print("  1.1 Deduplicating by content_hash (keep most recent)...")
+    log("  1.1 Deduplicating by content_hash (keep most recent)...")
     cursor.execute("""
         DELETE FROM jobs
         WHERE id NOT IN (
@@ -155,10 +197,10 @@ def main():
             ) WHERE rn = 1
         )
     """)
-    print(f"    Deleted {cursor.rowcount} duplicate records")
+    log(f"    Deleted {cursor.rowcount} duplicate records")
     conn.commit()
     
-    print("  1.2 Extracting locations from content...")
+    log("  1.2 Extracting locations from content...")
     cursor.execute("SELECT id, title, cleaned_content, location FROM jobs WHERE is_spam = 0 AND is_job_seeker = 0")
     location_updates = []
     for row in cursor.fetchall():
@@ -169,9 +211,9 @@ def main():
     if location_updates:
         cursor.executemany("UPDATE jobs SET location = ? WHERE id = ?", location_updates)
         conn.commit()
-    print(f"    Extracted location for {len(location_updates)} records")
+    log(f"    Extracted location for {len(location_updates)} records")
     
-    print("  1.3 Extracting companies from title/content...")
+    log("  1.3 Extracting companies from title/content...")
     cursor.execute("SELECT id, title, cleaned_content, company FROM jobs WHERE is_spam = 0 AND is_job_seeker = 0")
     company_updates = []
     for row in cursor.fetchall():
@@ -182,9 +224,9 @@ def main():
     if company_updates:
         cursor.executemany("UPDATE jobs SET company = ? WHERE id = ?", company_updates)
         conn.commit()
-    print(f"    Extracted company for {len(company_updates)} records")
+    log(f"    Extracted company for {len(company_updates)} records")
     
-    print("  1.4 Cleaning salary info...")
+    log("  1.4 Cleaning salary info...")
     cursor.execute("SELECT id, salary_info FROM jobs WHERE is_spam = 0 AND is_job_seeker = 0 AND salary_info != ''")
     salary_updates = []
     for row in cursor.fetchall():
@@ -194,18 +236,17 @@ def main():
     if salary_updates:
         cursor.executemany("UPDATE jobs SET salary_info = ? WHERE id = ?", salary_updates)
         conn.commit()
-    print(f"    Cleaned salary for {len(salary_updates)} records")
+    log(f"    Cleaned salary for {len(salary_updates)} records")
     
     cursor.execute("SELECT COUNT(*) FROM jobs WHERE is_spam = 0 AND is_job_seeker = 0")
     final_count = cursor.fetchone()[0]
-    print(f"\n  Final cleaned dataset: {final_count} unique job postings")
+    log(f"  Final cleaned dataset: {final_count} unique job postings")
     
     # Phase 2: Authenticate and get collection IDs
-    print("\n[Phase 2] Authenticating with PocketBase...")
+    log("[Phase 2] Authenticating with PocketBase...")
     token = pb_auth()
-    print("  Authenticated successfully")
+    log("  Authenticated successfully")
     
-    # Get existing collection IDs
     sources_coll = pb_request("GET", "/api/collections/sources", token)
     companies_coll = pb_request("GET", "/api/collections/companies", token)
     locations_coll = pb_request("GET", "/api/collections/locations", token)
@@ -217,10 +258,10 @@ def main():
         'locations': locations_coll["id"],
         'categories': categories_coll["id"],
     }
-    print(f"  Collection IDs: {coll_ids}")
+    log(f"  Collection IDs: {coll_ids}")
     
     # Ensure job_postings exists with correct schema
-    print("\n[Phase 3] Ensuring job_postings collection exists...")
+    log("[Phase 3] Ensuring job_postings collection exists...")
     jp = pb_request_ignore_404("GET", "/api/collections/job_postings", token)
     if not jp:
         job_postings_coll = {
@@ -249,15 +290,18 @@ def main():
             "listRule": "",
             "viewRule": "",
         }
-        pb_request("POST", "/api/collections", token, job_postings_coll)
-        print("  + Created job_postings collection")
+        if DRY_RUN:
+            log("  [DRY-RUN] Would create job_postings collection")
+        else:
+            pb_request("POST", "/api/collections", token, job_postings_coll)
+            log("  + Created job_postings collection")
     else:
-        print("  ~ job_postings collection exists")
+        log("  ~ job_postings collection exists")
     
     # Phase 4: Import data
-    print("\n[Phase 4] Importing data to PocketBase...")
+    log("[Phase 4] Importing data to PocketBase...")
     
-    print("  4.1 Importing sources...")
+    log("  4.1 Importing sources...")
     source_map = {
         'gtksa': {'name': 'gtksa', 'url': 'https://gtksa.net', 'is_active': True},
         'workingus': {'name': 'workingus', 'url': 'https://www.workingus.com', 'is_active': True},
@@ -267,17 +311,17 @@ def main():
     source_id_map = {}
     for key, data in source_map.items():
         source_id_map[key] = get_or_create_record(token, 'sources', data, f"name='{data['name']}'")
-    print(f"    Sources: {len(source_id_map)}")
+    log(f"    Sources: {len(source_id_map)}")
     
-    print("  4.2 Importing companies...")
+    log("  4.2 Importing companies...")
     cursor.execute("SELECT DISTINCT trim(company) as company FROM jobs WHERE is_spam = 0 AND is_job_seeker = 0 AND company != ''")
     company_id_map = {}
     for row in cursor.fetchall():
         company = row['company']
         company_id_map[company] = get_or_create_record(token, 'companies', {"name": company}, f"name='{company}'")
-    print(f"    Companies: {len(company_id_map)}")
+    log(f"    Companies: {len(company_id_map)}")
     
-    print("  4.3 Importing locations...")
+    log("  4.3 Importing locations...")
     cursor.execute("SELECT DISTINCT trim(location) as location FROM jobs WHERE is_spam = 0 AND is_job_seeker = 0 AND location != ''")
     location_id_map = {}
     for row in cursor.fetchall():
@@ -287,28 +331,41 @@ def main():
             full_text = loc
         data = {"city": city or None, "state": state or None, "country": country or 'US', "full_text": full_text}
         location_id_map[loc] = get_or_create_record(token, 'locations', data, f"full_text='{full_text}'")
-    print(f"    Locations: {len(location_id_map)}")
+    log(f"    Locations: {len(location_id_map)}")
     
-    print("  4.4 Importing categories...")
+    log("  4.4 Importing categories...")
     cursor.execute("SELECT DISTINCT trim(category) as category FROM jobs WHERE is_spam = 0 AND is_job_seeker = 0 AND category != ''")
     category_id_map = {}
     for row in cursor.fetchall():
         cat = row['category']
         if cat:
             category_id_map[cat] = get_or_create_record(token, 'categories', {"name": cat}, f"name='{cat}'")
-    print(f"    Categories: {len(category_id_map)}")
+    log(f"    Categories: {len(category_id_map)}")
     
-    print("  4.5 Importing job postings...")
+    # Fetch existing jobs to skip duplicates
+    log("  4.5 Fetching existing job postings from PocketBase...")
+    existing_jobs = fetch_existing_jobs(token, source_id_map)
+    log(f"    Found {len(existing_jobs)} existing job postings")
+    
+    log("  4.6 Importing job postings...")
     cursor.execute("SELECT * FROM jobs WHERE is_spam = 0 AND is_job_seeker = 0 ORDER BY date_posted DESC")
     
     imported = 0
+    skipped = 0
     failed = 0
     for row in cursor.fetchall():
         row_dict = dict(row)
+        source_id = source_id_map.get(row_dict['source_site'])
+        external_id = str(row_dict['external_id'])
+        
+        # Skip if already exists in PocketBase
+        if (source_id, external_id) in existing_jobs:
+            skipped += 1
+            continue
         
         job_data = {
-            "source": source_id_map.get(row_dict['source_site']),
-            "external_id": str(row_dict['external_id']),
+            "source": source_id,
+            "external_id": external_id,
             "title": row_dict['title'],
             "cleaned_content": row_dict['cleaned_content'],
             "detail_url": row_dict['detail_url'],
@@ -334,25 +391,31 @@ def main():
         if row_dict.get('contact_phone'):
             job_data["contact_phone"] = row_dict['contact_phone']
         
+        if DRY_RUN:
+            imported += 1
+            if imported % 100 == 0:
+                log(f"    [DRY-RUN] ... would import {imported}")
+            continue
+        
         try:
             pb_request("POST", "/api/collections/job_postings/records", token, job_data)
             imported += 1
             if imported % 100 == 0:
-                print(f"    ... imported {imported}")
+                log(f"    ... imported {imported}")
         except Exception as e:
             failed += 1
             if failed <= 3:
-                print(f"    ! Failed: {row_dict['title'][:50]} - {e}")
+                log(f"    ! Failed: {row_dict['title'][:50]} - {e}")
     
-    print(f"    Imported {imported} job postings, {failed} failed")
+    log(f"    Imported {imported}, Skipped {skipped}, Failed {failed}")
     
     conn.close()
-    print(f"\n[{datetime.now()}] Migration complete!")
-    print(f"  Sources: {len(source_id_map)}")
-    print(f"  Companies: {len(company_id_map)}")
-    print(f"  Locations: {len(location_id_map)}")
-    print(f"  Categories: {len(category_id_map)}")
-    print(f"  Job postings: {imported}")
+    log(f"Migration complete!")
+    log(f"  Sources: {len(source_id_map)}")
+    log(f"  Companies: {len(company_id_map)}")
+    log(f"  Locations: {len(location_id_map)}")
+    log(f"  Categories: {len(category_id_map)}")
+    log(f"  Job postings: {imported} new, {skipped} skipped, {failed} failed")
 
 
 if __name__ == '__main__':

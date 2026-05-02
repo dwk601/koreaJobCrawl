@@ -1,8 +1,9 @@
 [Unit]
-Description=Run Korean Job Board Crawler weekly
+Description=Run Korean Job Board Crawler Pipeline twice weekly
 
 [Timer]
 OnCalendar=Sun *-*-* 03:00:00
+OnCalendar=Wed *-*-* 03:00:00
 Persistent=true
 
 [Install]

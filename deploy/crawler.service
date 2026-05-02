@@ -1,15 +1,16 @@
 [Unit]
-Description=Korean Job Board Crawler
-After=network.target
+Description=Korean Job Board Crawler Pipeline
+After=network.target docker.service
+Requires=docker.service
 
 [Service]
 Type=oneshot
-User=dev
-Group=dev
-WorkingDirectory=/home/dev/code/koreaJobCrawl
-ExecStart=/home/dev/code/koreaJobCrawl/venv/bin/python /home/dev/code/koreaJobCrawl/run.py
-StandardOutput=append:/var/log/crawler.log
-StandardError=append:/var/log/crawler.log
+User=dwk1
+Group=dwk1
+WorkingDirectory=/home/dwk1/koreaJobCrawl
+ExecStart=/home/dwk1/koreaJobCrawl/deploy/run-pipeline.sh
+StandardOutput=append:/home/dwk1/crawler-pipeline.log
+StandardError=append:/home/dwk1/crawler-pipeline.log
 
 [Install]
 WantedBy=multi-user.target

@@ -1,6 +1,18 @@
 {
   "version": 1,
   "skills": {
+    "Data Cleaning Pipeline": {
+      "source": "aj-geddes/useful-ai-prompts",
+      "sourceType": "github",
+      "skillPath": "skills/data-cleaning-pipeline/SKILL.md",
+      "computedHash": "ac52c44cf6f095cb0daca78932e26f6b1ba8afd28f030c82159de7e11f246d39"
+    },
+    "ETL Pipeline": {
+      "source": "claude-office-skills/skills",
+      "sourceType": "github",
+      "skillPath": "etl-pipeline/SKILL.md",
+      "computedHash": "4663ddf39772a0181df90d996fddeb15c594de2c25cfb4ef7afe2f382df32973"
+    },
     "SQLite Database Expert": {
       "source": "martinholovsky/claude-skills-generator",
       "sourceType": "github",
@@ -25,11 +37,23 @@
       "skillPath": "skills/playwright-cli/SKILL.md",
       "computedHash": "d2ea99c86b1c7c4a2800f7f1594c20b46da237a9f4fe199f6dd93d89b27faaf0"
     },
+    "pocketbase-best-practices": {
+      "source": "greendesertsnow/pocketbase-skills",
+      "sourceType": "github",
+      "skillPath": "skills/pocketbase-best-practices/SKILL.md",
+      "computedHash": "93cd2d9df90887e856085f75890453ffcf6877cf909591f5e89b86bfdeed0e2b"
+    },
     "python-testing-patterns": {
       "source": "wshobson/agents",
       "sourceType": "github",
       "skillPath": "plugins/python-development/skills/python-testing-patterns/SKILL.md",
       "computedHash": "69915bb276b6aec61fe5b283a933f96584f66d14b616ce2060d95757629c6866"
+    },
+    "ssh": {
+      "source": "openhands/skills",
+      "sourceType": "github",
+      "skillPath": "skills/ssh/SKILL.md",
+      "computedHash": "1239c3eb5cd1bfd50b00da50fa2e2e38dcdfbeac164a6b55816108ac4a4dbb86"
     },
     "web-scraping": {
       "source": "jamditis/claude-skills-journalism",

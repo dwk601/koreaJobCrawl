@@ -1,4 +1,11 @@
 # Weekly cron job: every Sunday at 3:00 AM
-# Run: crontab -e and paste the line below (adjust paths)
+# Run: crontab -e and paste the line below
+#
+# Full pipeline: crawl -> clean -> migrate to PocketBase
+0 3 * * 0 /home/dwk1/koreaJobCrawl/deploy/run-pipeline.sh
 
-0 3 * * 0 cd /home/dev/code/koreaJobCrawl && ./venv/bin/python run.py >> /var/log/crawler.log 2>&1
+# Twice weekly: Sunday and Wednesday at 3:00 AM
+# 0 3 * * 0,3 /home/dwk1/koreaJobCrawl/deploy/run-pipeline.sh
+
+# Dry-run (test without modifying PocketBase):
+# /home/dwk1/koreaJobCrawl/deploy/run-pipeline.sh --dry-run
